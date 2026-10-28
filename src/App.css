@@ -1079,3 +1079,49 @@ tbody tr:hover td {
     break-inside: avoid;
   }
 }
+
+/* ================================
+   15. STATUS DAN INPUT INLINE
+================================ */
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid #f3c2bd;
+  border-radius: 14px;
+  background: #fff1ef;
+  color: #a5302a;
+  font-size: 14px;
+}
+
+.error-banner button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.inline-input {
+  width: 100%;
+  max-width: 110px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text-main);
+}
+
+.negative-text {
+  color: #c0392b;
+}
+
+.warning-text {
+  margin: 12px 0 0;
+  color: #a5302a;
+  font-size: 13px;
+}

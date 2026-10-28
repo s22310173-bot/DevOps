@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Pakan {
+  id        Int       @id @default(autoincrement())
+  tanggal   DateTime  @db.Date
+  nama      String    @db.VarChar(120)
+  jumlah    Decimal   @db.Decimal(12, 2)
+  harga     Int
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([tanggal])
+  @@map("pakan")
+}
+
+model PenggunaanPakan {
+  id        Int       @id @default(autoincrement())
+  tanggal   DateTime  @db.Date
+  nama      String?   @db.VarChar(120)
+  jumlah    Decimal   @db.Decimal(12, 2)
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([tanggal])
+  @@map("penggunaan_pakan")
+}
+
+model ProduksiTelur {
+  id        Int       @id @default(autoincrement())
+  tanggal   DateTime  @db.Date
+  jumlah    Int
+  rusak     Int       @default(0)
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([tanggal])
+  @@map("produksi_telur")
+}
+
+model PenjualanTelur {
+  id        Int       @id @default(autoincrement())
+  tanggal   DateTime  @db.Date
+  jumlah    Int
+  harga     Int
+  pelanggan String?   @db.VarChar(120)
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([tanggal])
+  @@map("penjualan_telur")
+}
+
+model Pengeluaran {
+  id         Int       @id @default(autoincrement())
+  tanggal    DateTime  @db.Date
+  nama       String    @db.VarChar(120)
+  jumlah     Int
+  keterangan String?   @db.VarChar(255)
+  deletedAt  DateTime? @map("deleted_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([tanggal])
+  @@map("pengeluaran")
+}
+
+model Pengaturan {
+  id        Int      @id @default(1)
+  populasi  Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("pengaturan")
+}
