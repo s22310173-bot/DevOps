@@ -7,7 +7,7 @@ export function PageHeading({ title, description, month, onMonthChange }) {
         <p>{description}</p>
       </div>
       <label className="month-select">
-        <span>Periode</span>
+        <span>Periode bulan </span>
         <input
           type="month"
           value={month}
