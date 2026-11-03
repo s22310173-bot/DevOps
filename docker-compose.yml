@@ -1,0 +1,104 @@
+# FarmCare — runtime produksi di VPS (juiziy.xyz)
+# Rahasia dibaca dari file .env di folder ini (lihat .env.example).
+
+name: farmcare
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MYSQL_DATABASE:-farmcare}
+      MARIADB_USER: ${MYSQL_USER:-farmcare}
+      MARIADB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD belum diisi di file .env}
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD belum diisi di file .env}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api:
+    build: ./server
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3001"
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+      MYSQL_USER: ${MYSQL_USER:-farmcare}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD belum diisi di file .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-farmcare}
+      DATABASE_URL: mysql://${MYSQL_USER:-farmcare}:${MYSQL_PASSWORD:?MYSQL_PASSWORD belum diisi di file .env}@db:3306/${MYSQL_DATABASE:-farmcare}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      # nginx-proxy menyajikan domain ini ke container web; acme-companion
+      # menerbitkan sertifikat Let's Encrypt untuk nama yang sama.
+      VIRTUAL_HOST: juiziy.xyz,www.juiziy.xyz
+      ACME_HOST: juiziy.xyz,www.juiziy.xyz
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz | grep -q ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:1.11.6
+    restart: unless-stopped
+    labels:
+      # Dicari oleh acme-companion untuk tahu container nginx yang harus di-reload.
+      - com.github.nginx-proxy.nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - vhost:/etc/nginx/vhost.d
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+  acme:
+    image: nginxproxy/acme-companion:2.8.2
+    restart: unless-stopped
+    depends_on:
+      - nginx-proxy
+    environment:
+      DEFAULT_EMAIL: ${ACME_EMAIL:?ACME_EMAIL belum diisi di file .env}
+    volumes:
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - vhost:/etc/nginx/vhost.d
+      - acme:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+volumes:
+  db-data:
+  certs:
+  html:
+  vhost:
+  acme:

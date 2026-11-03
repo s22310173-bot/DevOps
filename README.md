@@ -1,16 +1,30 @@
-# React + Vite
+# FarmCare
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplikasi operasional satu peternakan ayam petelur yang dikelola satu admin: pakan, produksi telur, penjualan, dan pengeluaran dicatat untuk kandang yang ada.
 
-Currently, two official plugins are available:
+## Struktur
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `src/` — frontend React + Vite (SPA, routing dengan react-router)
+- `server/` — API Express + Prisma untuk MariaDB
+- `docker-compose.yml`, `Dockerfile`, `server/Dockerfile`, `deploy/nginx.conf` — runtime produksi di VPS
+- `Jenkinsfile` — pipeline CI/CD (GitHub → Jenkins → deploy)
+- `docs/deploy.md` — panduan lengkap deploy ke VPS juiziy.xyz
+- `docs/adr/` — keputusan arsitektur
+- `docs/legacy/` — skrip deploy XAMPP lama (tidak dipakai lagi)
 
-## React Compiler
+## Menjalankan secara lokal
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+cp server/.env.example server/.env    # lalu isi password database
+npm run api                           # API di http://127.0.0.1:3001
+npm run dev                           # frontend di http://localhost:5173 (proxy /api ke 3001)
+```
 
-## Expanding the ESLint configuration
+Perintah lain: `npm run lint`, `npm run build`, `npm run db:push`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Deploy
+
+Push ke branch `main` → Jenkins membangun, menguji, dan men-deploy otomatis ke https://juiziy.xyz.
+
+Bootstrap VPS (sekali): ikuti `docs/deploy.md`.
