@@ -4,7 +4,7 @@ export function Topbar({ page, loading }) {
   return (
     <header className="topbar">
       <div className="breadcrumb">
-        FarmCare <span>/</span> {menuById(page)?.label}
+        MyFarm <span>/</span> {menuById(page)?.label}
       </div>
       <div className="topbar-right">
         <span className="status-dot" />
