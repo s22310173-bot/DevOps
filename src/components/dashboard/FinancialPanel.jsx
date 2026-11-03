@@ -6,7 +6,7 @@ export function FinancialPanel({ finance, feed, month }) {
       <div className="panel-header">
         <div>
           <h2>Ringkasan Keuangan</h2>
-          <p>Periode {month}</p>
+          <p>Periode bulan {month}</p>
         </div>
         <span className="panel-icon">Rp</span>
       </div>
