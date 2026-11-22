@@ -10,6 +10,12 @@ sudo rsync -a --delete \
   --exclude '.git' \
   --exclude '.env' \
   --exclude 'deploy' \
+  --exclude 'docs' \
+  --exclude 'Jenkinsfile' \
+  --exclude 'README.md' \
+  --exclude 'CONTEXT.md' \
+  --exclude '.gitignore' \
+  --exclude '.env.example' \
   "$SRC_DIR/" "$TARGET/"
 
 sudo chown -R root:www-data "$TARGET"

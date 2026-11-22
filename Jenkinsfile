@@ -34,7 +34,7 @@ pipeline {
     stage('Deploy') {
       steps {
         dir('/opt/farmcare') {
-          sh 'bash deploy/deploy.sh'
+          sh 'sudo -n /usr/local/bin/farmcare-deploy'
         }
       }
     }

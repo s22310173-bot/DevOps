@@ -76,13 +76,32 @@ sudo certbot renew --dry-run
 
 ## CI/CD (Jenkins)
 
-`Jenkinsfile` di root melakukan: checkout → lint PHP → `deploy/deploy.sh` → verifikasi.
+`Jenkinsfile` di root melakukan: checkout → lint PHP → `sudo -n /usr/local/bin/farmcare-deploy` → verifikasi.
 
-Agar Jenkins bisa menulis ke `/var/www/html`, beri sudo NOPASSWD khusus untuk
-skrip deploy, contoh `/etc/sudoers.d/farmcare-deploy`:
+Deploy dijalankan lewat wrapper root `/usr/local/bin/farmcare-deploy` (sinkron
+`/opt/farmcare` → `/var/www/html`, atur permission, reload Apache). Beri Jenkins
+sudo NOPASSWD hanya untuk wrapper itu, lewat `/etc/sudoers.d/farmcare-deploy`:
 
 ```
-jenkins ALL=(root) NOPASSWD: /usr/bin/rsync, /usr/bin/chown, /usr/bin/find, /usr/bin/chmod, /usr/bin/systemctl reload apache2
+jenkins ALL=(root) NOPASSWD: /usr/local/bin/farmcare-deploy
 ```
 
-Sesuaikan bila path binary berbeda (`which rsync`).
+Buat wrapper (root:root, 755) dengan isi:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+SRC="${1:-/opt/farmcare}"
+TARGET="${TARGET:-/var/www/html}"
+rsync -a --delete --exclude '.git' --exclude '.env' --exclude 'deploy' \
+  --exclude 'docs' --exclude 'Jenkinsfile' --exclude 'README.md' \
+  --exclude 'CONTEXT.md' --exclude '.gitignore' --exclude '.env.example' \
+  "$SRC/" "$TARGET/"
+chown -R root:www-data "$TARGET"
+find "$TARGET" -type d -exec chmod 755 {} +
+find "$TARGET" -type f -exec chmod 644 {} +
+[ -f "$TARGET/.env" ] && chmod 640 "$TARGET/.env"
+systemctl reload apache2
+```
+
+Untuk deploy manual di server, `sudo deploy/deploy.sh` juga bisa dipakai.
