@@ -1,6 +1,6 @@
 # Deploy FarmCare (PHP) ke VPS juiziy.xyz
 
-Runtime: Apache host + PHP 8.1 + MariaDB host, docroot `/var/www/html`.
+Runtime: Apache host + PHP 8.1 + MariaDB host, docroot `/var/www/html/devops`.
 
 ## Prasyarat server
 
@@ -30,7 +30,7 @@ mysql -uroot -p farmcare < backup.sql
 
 ## Konfigurasi aplikasi
 
-Buat `/var/www/html/.env` (jangan di-commit):
+Buat `/var/www/html/devops/.env` (jangan di-commit):
 
 ```
 DB_HOST=127.0.0.1
@@ -51,13 +51,13 @@ Dari mesin yang punya akses SSH:
 ./deploy/deploy.sh            # deploy dari folder proyek ini
 ```
 
-Skrip akan menyinkronkan source ke `/var/www/html`, mengatur permission,
-dan me-reload Apache. File `.env` di server tidak ditimpa.
+Skrip akan menyinkronkan source ke `/var/www/html/devops`, mengatur permission
+(owner `juiziy:www-data`), dan me-reload Apache. File `.env` di server tidak ditimpa.
 
 ## Apache
 
 Vhost `/etc/apache2/sites-enabled/000-default.conf` dan
-`000-default-le-ssl.conf` sudah menunjuk ke `/var/www/html` dengan
+`000-default-le-ssl.conf` sudah menunjuk ke `/var/www/html/devops` dengan
 `AllowOverride All`. Pastikan port 80/443 tidak dipakai proses lain
 (mis. container Docker nginx-proxy):
 
@@ -79,7 +79,7 @@ sudo certbot renew --dry-run
 `Jenkinsfile` di root melakukan: checkout → lint PHP → `sudo -n /usr/local/bin/farmcare-deploy` → verifikasi.
 
 Deploy dijalankan lewat wrapper root `/usr/local/bin/farmcare-deploy` (sinkron
-`/opt/farmcare` → `/var/www/html`, atur permission, reload Apache). Beri Jenkins
+`/opt/farmcare` → `/var/www/html/devops`, atur permission, reload Apache). Beri Jenkins
 sudo NOPASSWD hanya untuk wrapper itu, lewat `/etc/sudoers.d/farmcare-deploy`:
 
 ```
@@ -92,14 +92,14 @@ Buat wrapper (root:root, 755) dengan isi:
 #!/usr/bin/env bash
 set -euo pipefail
 SRC="${1:-/opt/farmcare}"
-TARGET="${TARGET:-/var/www/html}"
+TARGET="${TARGET:-/var/www/html/devops}"
 rsync -a --delete --exclude '.git' --exclude '.env' --exclude 'deploy' \
   --exclude 'docs' --exclude 'Jenkinsfile' --exclude 'README.md' \
   --exclude 'CONTEXT.md' --exclude '.gitignore' --exclude '.env.example' \
   "$SRC/" "$TARGET/"
-chown -R root:www-data "$TARGET"
-find "$TARGET" -type d -exec chmod 755 {} +
-find "$TARGET" -type f -exec chmod 644 {} +
+chown -R juiziy:www-data "$TARGET"
+find "$TARGET" -type d -exec chmod 775 {} +
+find "$TARGET" -type f -exec chmod 664 {} +
 [ -f "$TARGET/.env" ] && chmod 640 "$TARGET/.env"
 systemctl reload apache2
 ```
