@@ -1,30 +1,57 @@
-# FarmCare
+# FarmCare (PHP MVC)
 
-Aplikasi operasional satu peternakan ayam petelur yang dikelola satu admin: pakan, produksi telur, penjualan, dan pengeluaran dicatat untuk kandang yang ada.
+Aplikasi operasional peternakan ayam petelur (satu admin): pakan, produksi telur,
+penjualan, dan pengeluaran. Versi ini adalah hasil migrasi dari React + Express +
+Prisma ke **PHP MVC murni** (tanpa framework), dengan tampilan server-rendered
+berbasis Bootstrap 5 + jQuery.
+
+## Stack
+
+- PHP 8.1 (PDO MySQL)
+- Apache 2.4 (`mod_rewrite`, `mod_php`)
+- MariaDB/MySQL
+- Bootstrap 5 + jQuery (CDN)
+- Tanpa Composer, tanpa build step
 
 ## Struktur
 
-- `src/` — frontend React + Vite (SPA, routing dengan react-router)
-- `server/` — API Express + Prisma untuk MariaDB
-- `docker-compose.yml`, `Dockerfile`, `server/Dockerfile`, `deploy/nginx.conf` — runtime produksi di VPS
-- `Jenkinsfile` — pipeline CI/CD (GitHub → Jenkins → deploy)
-- `docs/deploy.md` — panduan lengkap deploy ke VPS juiziy.xyz
-- `docs/adr/` — keputusan arsitektur
-- `docs/legacy/` — skrip deploy XAMPP lama (tidak dipakai lagi)
-
-## Menjalankan secara lokal
-
-```bash
-npm install
-cp server/.env.example server/.env    # lalu isi password database
-npm run api                           # API di http://127.0.0.1:3001
-npm run dev                           # frontend di http://localhost:5173 (proxy /api ke 3001)
+```
+index.php              # front controller
+.htaccess              # rewrite + blokir akses /app dan dotfiles
+app/
+  bootstrap.php        # autoloader, .env, session
+  routes.php           # tabel rute
+  Config/entities.php  # definisi 5 entitas (field, validasi, tabel)
+  Core/                # Router, Database, Controller, Auth, Csrf, Validator, helpers
+  Controllers/         # Auth, Dashboard, Entity, Report, Settings
+  Models/              # EntityModel, Summary, Setting
+  Views/               # layouts, auth, dashboard, entities, report
+assets/                # css/js
+deploy/deploy.sh       # skrip deploy ke /var/www/html
 ```
 
-Perintah lain: `npm run lint`, `npm run build`, `npm run db:push`.
+## Menjalankan lokal
+
+1. Salin `.env.example` menjadi `.env`, isi kredensial DB dan hash password admin.
+2. Buat database dan impor skema/data (lihat `docs/deploy.md`).
+3. Arahkan DocumentRoot Apache ke folder proyek, atau jalankan
+   `php -S 127.0.0.1:8000` (butuh rewrite fallback manual).
+
+## Akun admin
+
+Kredensial diatur lewat `.env`:
+
+```
+ADMIN_USER=admin
+ADMIN_PASSWORD_HASH=...
+```
+
+Buat hash password:
+
+```bash
+php -r "echo password_hash('password-baru', PASSWORD_DEFAULT), PHP_EOL;"
+```
 
 ## Deploy
 
-Push ke branch `main` → Jenkins membangun, menguji, dan men-deploy otomatis ke https://juiziy.xyz.
-
-Bootstrap VPS (sekali): ikuti `docs/deploy.md`.
+Lihat `docs/deploy.md`.

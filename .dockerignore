@@ -1,9 +1,0 @@
-node_modules
-dist
-.git
-*.log
-.env
-.env.*
-!.env.example
-server/node_modules
-server/.env

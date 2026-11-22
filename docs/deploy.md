@@ -1,136 +1,88 @@
-# Deploy FarmCare ke VPS (juiziy.xyz)
+# Deploy FarmCare (PHP) ke VPS juiziy.xyz
 
-Panduan satu kali (bootstrap) untuk VPS Debian/Ubuntu. Setelah selesai, **setiap push ke branch `main` di GitHub akan otomatis ter-deploy** oleh Jenkins.
+Runtime: Apache host + PHP 8.1 + MariaDB host, docroot `/var/www/html`.
 
-Arsitektur: GitHub --push/webhook--> Jenkins (host VPS) --> Docker Compose (`db`, `api`, `web`, `nginx-proxy`, `acme`) --> https://juiziy.xyz
-
-Prasyarat:
-
-- VPS Debian/Ubuntu dengan RAM **minimal 4GB** (Jenkins + MariaDB + aplikasi).
-- Domain **juiziy.xyz** sudah terbeli, dengan panel DNS yang bisa diedit.
-- Akses root/`sudo` ke VPS.
-
----
-
-## 1. DNS
-
-Buat record berikut di provider domain, menunjuk ke IP VPS:
-
-| Type  | Name | Value    |
-|-------|------|----------|
-| A     | `@`  | IP VPS   |
-| A     | `www`| IP VPS   |
-
-(Butuh keduanya karena `www.juiziy.xyz` ikut disertakan di konfigurasi TLS.)
-
-## 2. Install Docker
+## Prasyarat server
 
 ```bash
-curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker $USER   # lalu logout/login lagi
-docker --version && docker compose version   # compose v2.20 ke atas
+sudo apt-get update
+sudo apt-get install -y php8.1 libapache2-mod-php8.1 php8.1-mysql php8.1-mbstring php8.1-curl
+sudo a2dismod php7.4
+sudo a2enmod php8.1 rewrite
 ```
 
-## 3. Install Jenkins
+## Database
+
+Buat database dan user (sesuaikan password, lalu samakan di `.env`):
+
+```sql
+CREATE DATABASE farmcare CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'farmcare'@'localhost' IDENTIFIED BY 'ganti-password';
+GRANT ALL PRIVILEGES ON farmcare.* TO 'farmcare'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Impor data (dari backup lama bila ada):
 
 ```bash
-sudo apt update && sudo apt install -y curl git openjdk-21-jre
-curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee /etc/apt/keyrings/jenkins-keyring.asc > /dev/null
-echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
-sudo apt update && sudo apt install -y jenkins
-sudo systemctl enable --now jenkins
+mysql -uroot -p farmcare < backup.sql
 ```
 
-Tambahkan user Jenkins ke grup docker:
+## Konfigurasi aplikasi
+
+Buat `/var/www/html/.env` (jangan di-commit):
+
+```
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=farmcare
+DB_USER=farmcare
+DB_PASS=ganti-password
+
+ADMIN_USER=admin
+ADMIN_PASSWORD_HASH=<hasil password_hash>
+```
+
+## Deploy file
+
+Dari mesin yang punya akses SSH:
 
 ```bash
-sudo usermod -aG docker jenkins
-sudo systemctl restart jenkins
+./deploy/deploy.sh            # deploy dari folder proyek ini
 ```
 
-Buka firewall (kalau memakai `ufw`):
+Skrip akan menyinkronkan source ke `/var/www/html`, mengatur permission,
+dan me-reload Apache. File `.env` di server tidak ditimpa.
+
+## Apache
+
+Vhost `/etc/apache2/sites-enabled/000-default.conf` dan
+`000-default-le-ssl.conf` sudah menunjuk ke `/var/www/html` dengan
+`AllowOverride All`. Pastikan port 80/443 tidak dipakai proses lain
+(mis. container Docker nginx-proxy):
 
 ```bash
-sudo ufw allow OpenSSH && sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw allow 8080
-sudo ufw enable
+sudo docker stop farmcare-web-1 farmcare-api-1 farmcare-nginx-proxy-1 farmcare-acme-1
+sudo systemctl enable --now apache2
 ```
 
-Selesai instalasi Jenkins:
+## Sertifikat SSL
 
-1. Buka `http://IP-VPS:8080`, ikuti setup wizard, **buat akun admin dengan password kuat** (Jenkins terbuka publik di port 8080).
-2. **Manage Jenkins → System → Jenkins URL**: isi `http://IP-VPS:8080/`.
-3. **Manage Jenkins → Plugins → Available**: pasang plugin **Git**, **GitHub**, dan **Pipeline** (biasanya sudah terpasang bawaan; pastikan).
-
-## 4. Siapkan repo dan `.env` di VPS
+Sertifikat Let's Encrypt dikelola `certbot` (timer aktif). Perpanjang manual:
 
 ```bash
-sudo mkdir -p /opt/farmcare && sudo chown -R $USER:$USER /opt/farmcare
-git clone https://github.com/s22310173-bot/DevOps.git /opt/farmcare
-cd /opt/farmcare
-cp .env.example .env
-nano .env    # isi MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD (huruf+angka), ACME_EMAIL
-chmod 600 .env
+sudo certbot renew --dry-run
 ```
 
-Repo bersifat publik, jadi clone tidak perlu kredensial. **`.env` tidak boleh di-commit** (sudah di-ignore).
+## CI/CD (Jenkins)
 
-## 5. Job Jenkins
+`Jenkinsfile` di root melakukan: checkout → lint PHP → `deploy/deploy.sh` → verifikasi.
 
-1. **New Item → Pipeline**, nama: `farmcare`.
-2. **Pipeline**: pilih *Pipeline script from SCM*:
-   - SCM: Git
-   - Repository URL: `https://github.com/s22310173-bot/DevOps.git`
-   - Branch Specifier: `*/main`
-   - Script Path: `Jenkinsfile`
-3. Di bagian **Advanced** (Pipeline), centang/isi **Use custom workspace**:
-   - Directory: `/opt/farmcare`
+Agar Jenkins bisa menulis ke `/var/www/html`, beri sudo NOPASSWD khusus untuk
+skrip deploy, contoh `/etc/sudoers.d/farmcare-deploy`:
 
-   (Supaya file `.env` tetap ada di antara build — jangan aktifkan opsi "Clean before checkout"/wipe workspace.)
-4. **Build Triggers**: centang **GitHub hook trigger for GITScm polling**.
-5. **Save**.
-
-## 6. Webhook GitHub
-
-Di repo GitHub: **Settings → Webhooks → Add webhook**:
-
-- Payload URL: `http://IP-VPS:8080/github-webhook/`
-- Content type: `application/json`
-- Events: centang **Push events**
-- Active: centang
-
-Klik *Redeliver* sekali untuk memastikan berstatus 200.
-
-## 7. Build pertama & verifikasi
-
-Klik **Build Now** di job `farmcare`. Urutan pipeline: lint → build image → `prisma db push` → `docker compose up -d --wait` → health check.
-
-Setelah hijau:
-
-```bash
-curl https://juiziy.xyz/api/health        # {"status":"ok"}
+```
+jenkins ALL=(root) NOPASSWD: /usr/bin/rsync, /usr/bin/chown, /usr/bin/find, /usr/bin/chmod, /usr/bin/systemctl reload apache2
 ```
 
-Buka https://juiziy.xyz di browser. Catatan deploy pertama:
-
-- Sertifikat Let's Encrypt diterbitkan detik-menit setelah container hidup; sebelum itu browser mungkin memperingatkan sertifikat (self-signed bawaan) — akan hilang sendiri.
-- Kalau pipeline gagal di bagian health check, lihat log: `docker compose logs --tail=100 api web nginx-proxy acme`.
-
-## Operasi harian
-
-| Kegiatan | Cara |
-|---|---|
-| Update aplikasi | `git push origin main` → Jenkins otomatis deploy |
-| Lihat status | Buka `http://IP-VPS:8080` → job `farmcare` |
-| Log container | `cd /opt/farmcare && docker compose logs -f api web` |
-| Restart semua | `docker compose restart` |
-| Backup database | `docker compose exec db sh -c 'mariadb-dump -uroot -p$MARIADB_ROOT_PASSWORD farmcare' > backup-$(date +%F).sql` |
-
-Troubleshooting singkat:
-
-- **Webhook tidak masuk** → pastikan URL-nya `http://IP-VPS:8080/github-webhook/` dan Jenkins bisa diakses dari internet.
-- **Pipeline gagal `permission denied` pada docker** → `sudo usermod -aG docker jenkins && sudo systemctl restart jenkins`.
-- **404 di semua halaman** → build frontend bermasalah: cek stage Lint/Build di Jenkins.
-- **`/api` 502** → `docker compose ps` (api/db harus `healthy`), lalu `docker compose logs api`.
-- **Sertifikat tidak terbit** → cek DNS sudah resolve ke IP VPS dan port 80 terbuka: `curl -sI http://juiziy.xyz | head -1`.
-
-Keputusan arsitektur terkait: `docs/adr/0002-vps-docker-jenkins.md` (menggantikan ADR 0001 untuk jalur produksi).
+Sesuaikan bila path binary berbeda (`which rsync`).
