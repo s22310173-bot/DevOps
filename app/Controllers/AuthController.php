@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\Audit;
 use App\Core\Auth;
 use App\Core\Controller;
 
@@ -30,8 +31,18 @@ class AuthController extends Controller
         $password = (string) ($_POST['password'] ?? '');
 
         if (Auth::attempt($username, $password)) {
+            Audit::log('login', 'auth', $username);
             $this->redirect('/');
         }
+
+        $safeUser = str_replace(["\r", "\n"], '', $username);
+        error_log(sprintf(
+            '[auth] login gagal username="%s" ip=%s waktu=%s',
+            $safeUser,
+            $_SERVER['REMOTE_ADDR'] ?? '-',
+            date('c')
+        ));
+        Audit::log('login_failed', 'auth', $safeUser === '' ? 'unknown' : $safeUser);
 
         $_SESSION['_flash_error'] = 'Username atau password salah.';
         $this->redirect('/login');

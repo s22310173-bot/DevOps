@@ -6,6 +6,20 @@ $(function () {
         }
     });
 
+    $('.js-auto-submit').on('change', function () {
+        if (this.form) {
+            this.form.submit();
+        }
+    });
+
+    $('.js-print').on('click', function () {
+        window.print();
+    });
+
+    $('[data-width]').each(function () {
+        this.style.width = this.getAttribute('data-width') + '%';
+    });
+
     window.setTimeout(function () {
         $('.alert-auto').fadeOut(400);
     }, 4000);

@@ -10,8 +10,8 @@ $eggs = $summary['eggs'];
     </div>
     <form method="get" action="/laporan" class="d-flex align-items-center gap-2">
         <label class="small text-muted mb-0" for="month">Periode</label>
-        <input class="form-control form-control-sm" type="month" id="month" name="month"
-               value="<?= e($month) ?>" onchange="this.form.submit()">
+        <input class="form-control form-control-sm js-auto-submit" type="month" id="month" name="month"
+               value="<?= e($month) ?>">
     </form>
 </div>
 
@@ -60,7 +60,7 @@ $eggs = $summary['eggs'];
     <div class="report-row"><span>Stok telur (kumulatif)</span><strong><?= e(num($eggs['stock'])) ?> butir</strong></div>
     <div class="report-row"><span>HD% (hari tercatat)</span><strong><?= $eggs['hdPercent'] === null ? '—' : e(num($eggs['hdPercent'])) . '%' ?></strong></div>
 
-    <button type="button" class="btn btn-success mt-4 no-print" onclick="window.print()">Cetak / Simpan PDF</button>
+    <button type="button" class="btn btn-success mt-4 no-print js-print">Cetak / Simpan PDF</button>
     <p class="disclaimer">
         Catatan: selisih keuangan ini masih estimasi kas sederhana. Biaya pakan dihitung dari pembelian,
         bukan dari pakan yang dikonsumsi.

@@ -53,7 +53,33 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
         'secure' => $secure,
     ]);
     session_name('farmcare_session');
+    ini_set('session.gc_maxlifetime', '1800'); // 30 minutes
     session_start();
+    $idleLimit = 1800; // 30 minutes
+    if (!empty($_SESSION['auth'])){
+        $last = $_SESSION['last_activity'] ?? time();
+        if (time() - $last > $idleLimit) {
+            unset($_SESSION['auth']);
+            session_regenerate_id(true);
+        }else{
+            $_SESSION['last_activity'] = time();}
+    }
 }
 
 require BASE_PATH . '/app/Core/helpers.php';
+
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header(
+    "Content-Security-Policy: default-src 'self'; "
+    . "script-src 'self' https://code.jquery.com https://cdn.jsdelivr.net; "
+    . "style-src 'self' https://cdn.jsdelivr.net; "
+    . "img-src 'self' data:; "
+    . "font-src 'self' https://cdn.jsdelivr.net; "
+    . "connect-src 'self'; "
+    . "object-src 'none'; "
+    . "base-uri 'self'; "
+    . "form-action 'self'; "
+    . "frame-ancestors 'none'"
+);

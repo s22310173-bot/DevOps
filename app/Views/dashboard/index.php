@@ -19,8 +19,8 @@ foreach (menu_items() as $item) {
     </div>
     <form method="get" action="/" class="d-flex align-items-center gap-2">
         <label class="small text-muted mb-0" for="month">Periode</label>
-        <input class="form-control form-control-sm" type="month" id="month" name="month"
-               value="<?= e($month) ?>" onchange="this.form.submit()">
+        <input class="form-control form-control-sm js-auto-submit" type="month" id="month" name="month"
+               value="<?= e($month) ?>">
     </form>
 </div>
 
@@ -93,8 +93,8 @@ foreach (menu_items() as $item) {
             <div class="finance-row"><span>Pembelian pakan</span><strong><?= e(money($finance['feedCostMonth'])) ?></strong></div>
             <div class="finance-row"><span>Pengeluaran lain</span><strong><?= e(money($finance['otherExpensesMonth'])) ?></strong></div>
             <div class="finance-row"><span>Nilai pakan terpakai (estimasi)</span><strong><?= e(money($feed['usedValue'])) ?></strong></div>
-            <div class="progress mt-3" style="height: 8px;">
-                <div class="progress-bar bg-success" role="progressbar" style="width: <?= e(number_format($barWidth, 1, '.', '')) ?>%"></div>
+            <div class="progress progress-sm mt-3">
+                <div class="progress-bar bg-success" role="progressbar" data-width="<?= e(number_format($barWidth, 1, '.', '')) ?>"></div>
             </div>
             <div class="small text-muted mt-2">Pendapatan dibanding pengeluaran</div>
         </div>

@@ -11,6 +11,8 @@ sudo rsync -a --delete \
   --exclude '.env' \
   --exclude 'deploy' \
   --exclude 'docs' \
+  --exclude 'scripts' \
+  --exclude 'storage' \
   --exclude 'Jenkinsfile' \
   --exclude 'README.md' \
   --exclude 'CONTEXT.md' \
@@ -19,9 +21,12 @@ sudo rsync -a --delete \
   "$SRC_DIR/" "$TARGET/"
 
 sudo chown -R juiziy:www-data "$TARGET"
-sudo find "$TARGET" -type d -exec chmod 775 {} +
-sudo find "$TARGET" -type f -exec chmod 664 {} +
+sudo find "$TARGET" -type d -exec chmod 755 {} +
+sudo find "$TARGET" -type f -exec chmod 644 {} +
 [ -f "$TARGET/.env" ] && sudo chmod 640 "$TARGET/.env"
+
+# Folder log audit (di luar rsync) harus bisa ditulis proses web.
+sudo install -d -o www-data -g www-data -m 750 "$TARGET/storage/logs"
 
 sudo systemctl reload apache2
 echo "Deploy selesai ke $TARGET"

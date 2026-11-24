@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\Audit;
 use App\Core\Controller;
 use App\Models\Setting;
 
@@ -19,6 +20,7 @@ class SettingsController extends Controller
             $_SESSION['_flash_error'] = 'Populasi harus bilangan bulat dan tidak negatif.';
         } else {
             Setting::savePopulasi($populasi);
+            Audit::log('update', 'settings#populasi');
             $_SESSION['_flash_success'] = 'Populasi ayam diperbarui.';
         }
 

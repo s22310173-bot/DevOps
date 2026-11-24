@@ -27,13 +27,15 @@ class EntityModel
         return $row ?: null;
     }
 
-    public function create(array $data): void
+    public function create(array $data): int
     {
         $columns = array_keys($data);
         $placeholders = array_fill(0, count($columns), '?');
         $sql = "INSERT INTO {$this->table} (" . implode(', ', $columns) . ", created_at, updated_at)"
             . ' VALUES (' . implode(', ', $placeholders) . ', NOW(), NOW())';
-        Database::pdo()->prepare($sql)->execute(array_values($data));
+        $pdo = Database::pdo();
+        $pdo->prepare($sql)->execute(array_values($data));
+        return (int) $pdo->lastInsertId();
     }
 
     public function update(int $id, array $data): void

@@ -94,14 +94,64 @@ set -euo pipefail
 SRC="${1:-/opt/farmcare}"
 TARGET="${TARGET:-/var/www/html/devops}"
 rsync -a --delete --exclude '.git' --exclude '.env' --exclude 'deploy' \
-  --exclude 'docs' --exclude 'Jenkinsfile' --exclude 'README.md' \
-  --exclude 'CONTEXT.md' --exclude '.gitignore' --exclude '.env.example' \
+  --exclude 'docs' --exclude 'scripts' --exclude 'storage' --exclude 'Jenkinsfile' \
+  --exclude 'README.md' --exclude 'CONTEXT.md' --exclude '.gitignore' \
+  --exclude '.env.example' \
   "$SRC/" "$TARGET/"
 chown -R juiziy:www-data "$TARGET"
-find "$TARGET" -type d -exec chmod 775 {} +
-find "$TARGET" -type f -exec chmod 664 {} +
+find "$TARGET" -type d -exec chmod 755 {} +
+find "$TARGET" -type f -exec chmod 644 {} +
 [ -f "$TARGET/.env" ] && chmod 640 "$TARGET/.env"
+install -d -o www-data -g www-data -m 750 "$TARGET/storage/logs"
 systemctl reload apache2
 ```
 
 Untuk deploy manual di server, `sudo deploy/deploy.sh` juga bisa dipakai.
+
+## Penguatan PHP (disable_functions)
+
+Gabungkan isi `deploy/php-security.ini` ke `php.ini` server lalu restart:
+
+```bash
+sudo cp deploy/php-security.ini /etc/php/8.1/apache2/conf.d/99-farmcare.ini
+sudo systemctl restart apache2
+php8.1 -i | grep disable_functions   # verifikasi
+```
+
+## Pemantauan log (G5/G6)
+
+Skrip disalin ke `/opt/farmcare/scripts` (tidak ikut ke docroot). Jadwalkan lewat
+`/etc/cron.d/farmcare`:
+
+```cron
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# G5: pemantauan log tiap jam
+0 * * * * root /opt/farmcare/scripts/monitor_logs.sh >> /var/log/farmcare-monitor.log 2>&1
+# G6: analisis anomali harian 06:15
+15 6 * * * root /opt/farmcare/scripts/analyze_anomalies.sh >> /var/log/farmcare-anomali.log 2>&1
+# J1/J3: backup harian 02:00
+0 2 * * * root BACKUP_DIR=/backup/farmcare RETENTION_DAYS=30 /opt/farmcare/scripts/backup.sh >> /var/log/farmcare-backup.log 2>&1
+```
+
+Isi `SLACK_WEBHOOK` / `ALERT_EMAIL` pada `monitor_logs.sh` (atau environment) agar
+peringatan terkirim.
+
+## Backup & restore (J1/J2/J3)
+
+`backup.sh` membaca kredensial DB dari `.env` aplikasi secara otomatis. Backup
+disimpan di folder terpisah `/backup/farmcare` (di luar docroot). Agar memenuhi
+**J3 (off-site)**, pasang `rclone` lalu isi `OFFSITE_REMOTE` (mis. `gdrive:farmcare`).
+
+Uji restore berkala (catat hasilnya sebagai bukti). Bila user DB tidak punya hak
+`CREATE DATABASE`, jalankan sebagai root DB:
+
+```bash
+sudo env DB_HOST=127.0.0.1 DB_USER=root DB_PASS='<root-pass>' \
+    RESTORE_LOG=/backup/farmcare/restore-test.log \
+    /opt/farmcare/scripts/restore_test.sh /backup/farmcare/farmcare-db-TANGGAL.sql.gz
+```
+
+Bukti uji ditulis ke `/backup/farmcare/restore-test.log`.
+
+Status pemeriksaan keamanan lengkap ada di `docs/security.md`.

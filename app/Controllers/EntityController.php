@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\Audit;
 use App\Core\Controller;
 use App\Core\Validator;
 use App\Models\EntityModel;
@@ -86,7 +87,8 @@ class EntityController extends Controller
             return;
         }
 
-        (new EntityModel($config['table']))->create($data);
+        $newId = (new EntityModel($config['table']))->create($data);
+        Audit::log('create', $entity . '#' . $newId);
         $_SESSION['_flash_success'] = 'Data berhasil disimpan.';
         $this->redirect('/' . $entity);
     }
@@ -115,6 +117,7 @@ class EntityController extends Controller
         }
 
         $model->update((int) $id, $data);
+        Audit::log('update', $entity . '#' . (int) $id);
         $_SESSION['_flash_success'] = 'Data berhasil diperbarui.';
         $this->redirect('/' . $entity);
     }
@@ -127,6 +130,7 @@ class EntityController extends Controller
 
         $deleted = (new EntityModel($config['table']))->softDelete((int) $id);
         if ($deleted) {
+            Audit::log('delete', $entity . '#' . (int) $id);
             $_SESSION['_flash_success'] = 'Data berhasil dihapus.';
         } else {
             $_SESSION['_flash_error'] = 'Data tidak ditemukan atau sudah dihapus.';

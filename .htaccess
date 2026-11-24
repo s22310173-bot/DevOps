@@ -3,8 +3,20 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Blokir akses langsung ke kode aplikasi, konfigurasi, dan dotfiles.
+    # Jangan ganggu validasi ACME (perpanjangan sertifikat Let's Encrypt).
+    RewriteRule ^\.well-known/acme-challenge/ - [L]
+
+    # F5: paksa HTTPS + domain kanonik.
+    RewriteCond %{HTTP_HOST} ^103\.139\.192\.112$ [NC]
+    RewriteRule ^ https://juiziy.xyz%{REQUEST_URI} [R=301,L]
+
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP_HOST} ^(www\.)?juiziy\.xyz$ [NC]
+    RewriteRule ^ https://juiziy.xyz%{REQUEST_URI} [R=301,L]
+
+    # Blokir akses langsung ke kode aplikasi, konfigurasi, log, dan dotfiles.
     RewriteRule ^app(/|$) - [F,L]
+    RewriteRule ^storage(/|$) - [F,L]
     RewriteRule (^|/)\. - [F,L]
 
     # Biarkan file dan folder yang benar-benar ada (aset statis).
