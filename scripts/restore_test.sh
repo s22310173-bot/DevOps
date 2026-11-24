@@ -21,6 +21,7 @@ DB_USER="${DB_USER:-farmcare}"
 DB_PASS="${DB_PASS:-}"
 TEST_DB="${TEST_DB:-farmcare_restore_test}"
 RESTORE_LOG="${RESTORE_LOG:-$HOME/farmcare-restore-test.log}"
+OPERATOR="${RESTORE_OPERATOR:-${SUDO_USER:-$(id -un)}}"
 
 export MYSQL_PWD="$DB_PASS"
 
@@ -38,8 +39,8 @@ if [ "${TABLES:-0}" -lt 1 ]; then
 fi
 
 echo "Restore test OK. $TABLES tabel dipulihkan ke database $TEST_DB."
-printf 'Restore test OK | file=%s | tabel=%s | waktu=%s\n' \
-    "$DUMP" "$TABLES" "$(date -Is)" | tee -a "$RESTORE_LOG"
+printf 'Restore test OK | file=%s | tabel=%s | operator=%s | waktu=%s\n' \
+    "$DUMP" "$TABLES" "$OPERATOR" "$(date -Is)" | tee -a "$RESTORE_LOG"
 
 mysql -h "$DB_HOST" -u "$DB_USER" -e "DROP DATABASE IF EXISTS \`$TEST_DB\`;"
 echo "Database uji dihapus. Bukti uji dicatat di $RESTORE_LOG"
