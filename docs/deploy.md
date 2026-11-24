@@ -130,7 +130,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 0 * * * * root /opt/farmcare/scripts/monitor_logs.sh >> /var/log/farmcare-monitor.log 2>&1
 # G6: analisis anomali harian 06:15
 15 6 * * * root /opt/farmcare/scripts/analyze_anomalies.sh >> /var/log/farmcare-anomali.log 2>&1
-# J1/J3: backup harian 02:00
+# J1: backup harian lokal 02:00 (off-site J3 ditarik terpisah, lihat di bawah)
 0 2 * * * root BACKUP_DIR=/backup/farmcare RETENTION_DAYS=30 /opt/farmcare/scripts/backup.sh >> /var/log/farmcare-backup.log 2>&1
 ```
 
@@ -140,8 +140,17 @@ peringatan terkirim.
 ## Backup & restore (J1/J2/J3)
 
 `backup.sh` membaca kredensial DB dari `.env` aplikasi secara otomatis. Backup
-disimpan di folder terpisah `/backup/farmcare` (di luar docroot). Agar memenuhi
-**J3 (off-site)**, pasang `rclone` lalu isi `OFFSITE_REMOTE` (mis. `gdrive:farmcare`).
+disimpan di folder terpisah `/backup/farmcare` (di luar docroot) — memenuhi **J1**.
+
+**J3 (off-site)**: salinan backup ditarik otomatis tiap hari dari server ke mesin
+terpisah (di luar VPS) memakai `scripts/pull-backups.ps1` lewat SSH key, dengan
+retensi 30 hari. Di Windows, tugas `FarmCareOffsiteBackupPull` (Task Scheduler)
+menjalankannya pada 09:00 dan mencatat hasil ke `pull.log`. Integritas dicek
+dengan `sha256sum`: nilai file di server harus sama dengan salinan off-site.
+
+Alternatif cloud (opsional): pasang `rclone`, lalu isi `OFFSITE_REMOTE`
+(mis. `b2crypt:farmcare`) pada cron `backup.sh` untuk unggah terenkripsi ke
+Backblaze B2 / Google Drive.
 
 Uji restore berkala (catat hasilnya sebagai bukti). Bila user DB tidak punya hak
 `CREATE DATABASE`, jalankan sebagai root DB:
@@ -152,6 +161,7 @@ sudo env DB_HOST=127.0.0.1 DB_USER=root DB_PASS='<root-pass>' \
     /opt/farmcare/scripts/restore_test.sh /backup/farmcare/farmcare-db-TANGGAL.sql.gz
 ```
 
-Bukti uji ditulis ke `/backup/farmcare/restore-test.log`.
+Bukti uji ditulis ke `/backup/farmcare/restore-test.log`. Salinan off-site tersimpan
+di mesin terpisah (lihat `scripts/pull-backups.ps1`).
 
 Status pemeriksaan keamanan lengkap ada di `docs/security.md`.

@@ -17,7 +17,7 @@ untuk audit ulang.
 | **H6** Nonaktifkan fungsi berbahaya | Selesai (config) | `deploy/php-security.ini` (`disable_functions`) — terapkan ke `php.ini` server |
 | **J1** Folder backup terpisah | Selesai | `scripts/backup.sh` (default `/backup/farmcare`, di luar docroot) |
 | **J2** Uji restore | Selesai | `scripts/restore_test.sh` (mencatat bukti uji) |
-| **J3** Backup off-site + retensi | Selesai | `scripts/backup.sh` (`OFFSITE_REMOTE` via rclone, `RETENTION_DAYS`) |
+| **J3** Backup off-site + retensi | Selesai | Salinan harian ditarik ke mesin terpisah via `scripts/pull-backups.ps1` (Task Scheduler `FarmCareOffsiteBackupPull`, retensi 30 hari); integritas dicek `sha256sum`. Opsional cloud: `OFFSITE_REMOTE` (rclone) di `scripts/backup.sh`. |
 
 ## Format audit log (G3)
 
