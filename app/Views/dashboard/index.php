@@ -15,7 +15,7 @@ foreach (menu_items() as $item) {
 <div class="page-heading d-flex flex-wrap justify-content-between align-items-start gap-3">
     <div>
         <h1>Dashboard</h1>
-        <p>Pantau kondisi peternakan Anda dalam satu tempat.</p>
+        <p>Pantau kondisi peternakan anda</p>
     </div>
     <form method="get" action="/" class="d-flex align-items-center gap-2">
         <label class="small text-muted mb-0" for="month">Periode</label>
