@@ -29,12 +29,13 @@ class Auth
 
         session_regenerate_id(true);
         $_SESSION['auth'] = ['username' => $username];
+        $_SESSION['last_activity'] = time();
         return true;
     }
 
     public static function logout(): void
     {
-        unset($_SESSION['auth']);
+        unset($_SESSION['auth'], $_SESSION['last_activity']);
         session_regenerate_id(true);
     }
 }
